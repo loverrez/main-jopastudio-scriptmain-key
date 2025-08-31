@@ -1,0 +1,99 @@
+_G.Config = {
+    ['Speed Car'] = 550,
+    ['Farm'] = true
+}
+
+do
+    Player = game:GetService("Players").LocalPlayer;
+    Gui = Player.PlayerGui;
+
+    VirtualInputManager = game:GetService("VirtualInputManager");
+end
+
+local function clickgui(a)
+    game:GetService("GuiService").SelectedObject = a
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game); VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game);
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.BackSlash, false, game); VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.BackSlash, false, game);
+end
+
+if Gui:FindFirstChild("Loading") then
+    clickgui(Gui:FindFirstChild("Loading").Menu.Main.Play)
+    repeat wait(1) until not Gui:FindFirstChild("Loading")
+end
+
+Player.Idled:Connect(function()
+    local VirtualUser = game:GetService("VirtualUser")
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new(), workspace.CurrentCamera.CFrame)
+end)
+
+for _, v in pairs(workspace:GetDescendants()) do
+    if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+        v.Material = Enum.Material.SmoothPlastic
+        if v:IsA("Texture") then
+            v:Destroy()
+        end
+    end
+end
+
+-- // load car
+clickgui(Gui.MainHUD.HUD.MainHUD.SideHUD["BL-Row1"].SideButtons.ButtonList.HUDGarageFrame.Hover)
+wait(1)
+clickgui(Gui.MainHUD.HUD.MainHUD.SideHUD["BL-Row1"].SideButtons.ButtonList.HUDGarageFrame.Hover)
+
+do
+    function Mycar()
+        return Player.Character.Humanoid.SeatPart and Player.Character.Humanoid.SeatPart.Parent
+    end
+    function TPcar(p)
+        local car = Mycar()
+        if not car or not car.PrimaryPart then return end
+        local bg = Instance.new("BodyGyro", car.PrimaryPart)
+        local bv = Instance.new("BodyVelocity", car.PrimaryPart)
+        local direction = (p.p - car.PrimaryPart.Position).Unit
+        local distance = (car.PrimaryPart.Position - p.p).Magnitude
+
+        bg.P = 5000
+        bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+
+        bg.CFrame = CFrame.new(car.PrimaryPart.Position, car.PrimaryPart.Position + direction)
+        bv.Velocity = direction * _G.Config['Speed Car']
+
+        task.wait(distance / _G.Config['Speed Car'])
+        bv.Velocity = Vector3.zero
+        task.wait(0.1)
+        bv:Destroy()
+        bg:Destroy()
+    end
+    function GetStartCar()
+        local mainHUD = Gui:WaitForChild("MainHUD")
+        for _, v in ipairs(mainHUD.StarterCarsNew.InnerFrame.CarList:GetChildren()) do
+            for _, a in ipairs(mainHUD.Vehicles.Container.List:GetChildren()) do
+                if v.Name == a.Name then
+                    return v.Name
+                end
+            end
+        end
+        return nil
+    end
+end
+
+local StartPos = CFrame.new(Vector3.new(-34567.375, 30.896, -32846.047), Vector3.new())
+local EndPos = CFrame.new(Vector3.new(-18214, 30.896, -473), Vector3.new())
+local Farm = coroutine.create(function()
+    while task.wait() do
+        pcall(function()
+            if _G.Config['Farm'] then
+                if not Mycar() then
+                    game:GetService("ReplicatedStorage").Remotes.VehicleEvent:FireServer("Spawn" ,tostring(GetStartCar()))
+                else
+                    Mycar():SetPrimaryPartCFrame(StartPos + Vector3.new(0, 0, 0))
+                    TPcar(EndPos + Vector3.new(0, 0, 0))
+                end
+            end
+        end)
+    end
+end)
+
+coroutine.resume(Farm)
